@@ -11,10 +11,40 @@ const els = {
   mMeta: document.getElementById('mMeta'),
   mGenres: document.getElementById('mGenres'),
   mOverview: document.getElementById('mOverview'),
+  themeToggle: document.getElementById('themeToggle'),
 };
 
+// ===================== Tema (oscuro/claro) =====================
+const THEME_KEY = 'mf-theme';
+function applyTheme(mode) {
+  document.documentElement.classList.toggle('dark', mode === 'dark');
+  updateToggleIcon();
+}
+function getSystemPrefersDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const mode = saved || (getSystemPrefersDark() ? 'dark' : 'light');
+  applyTheme(mode);
+}
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const next = isDark ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+}
+function updateToggleIcon() {
+  const isDark = document.documentElement.classList.contains('dark');
+  if (!els.themeToggle) return;
+  els.themeToggle.textContent = isDark ? '☀️' : '🌙';
+  els.themeToggle.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+}
+initTheme();
+els.themeToggle?.addEventListener('click', toggleTheme);
 
-const TMDB_KEY = '20600cdcada2dc0d20425d2fc04c9e8b';
+// ===================== API TMDB =====================
+const TMDB_KEY = 'TU_API_KEY';
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/';
 const POSTER = (path, size='w342') => path ? `${IMG}${size}${path}` : null;
@@ -29,19 +59,19 @@ function clearGrid(){ els.grid.innerHTML = ''; }
 function skeletonCards(qty = 8){
   const card = `
   <div class="animate-pulse transition">
-    <div class="aspect-[2/3] w-full rounded-xl bg-slate-800"></div>
-    <div class="mt-2 h-4 w-3/4 rounded bg-slate-800"></div>
-    <div class="mt-1 h-3 w-1/2 rounded bg-slate-800"></div>
+    <div class="aspect-[2/3] w-full rounded-xl bg-slate-200 dark:bg-slate-800"></div>
+    <div class="mt-2 h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-800"></div>
+    <div class="mt-1 h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-800"></div>
   </div>`;
   els.grid.insertAdjacentHTML('beforeend', Array.from({length: qty}).map(() => card).join(''));
 }
 
-// 🧩 Template visual mejorado
 function cardTemplate({ id, title, year, poster, rating }) {
   return `
   <button data-id="${id}"
     class="group relative text-left focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded-xl overflow-hidden transition">
-    <div class="aspect-[2/3] w-full overflow-hidden rounded-xl ring-1 ring-white/10 bg-slate-900 group-hover:ring-emerald-400/50 shadow-md">
+    <div class="aspect-[2/3] w-full overflow-hidden rounded-xl ring-1 ring-black/10 bg-slate-100
+                dark:ring-white/10 dark:bg-slate-900 shadow-sm">
       <img src="${poster}" alt="Póster de ${title}"
         class="h-full w-full object-cover group-hover:scale-[1.06] transition-transform duration-300 ease-out opacity-0"
         onload="this.classList.remove('opacity-0')">
@@ -53,6 +83,7 @@ function cardTemplate({ id, title, year, poster, rating }) {
         </div>
       </div>
     </div>
+    <!-- Altura fija del título para alinear tarjetas -->
     <h3 class="mt-2 text-sm font-medium line-clamp-2 h-9 leading-tight">${title}</h3>
   </button>`;
 }
@@ -73,7 +104,7 @@ async function getMovie(id) {
 }
 
 function renderResults(list, append=false) {
-  // 🔍 Filtramos solo los que tienen imagen válida
+  // Mostrar solo películas con póster
   const filtered = list.filter(m => m.poster_path);
 
   if (!filtered.length) {
@@ -94,7 +125,7 @@ function renderResults(list, append=false) {
   if (!append) clearGrid();
   els.grid.insertAdjacentHTML('beforeend', items);
 
-  // Delegación: abrir modal al click
+  // Click → modal
   els.grid.querySelectorAll('button[data-id]').forEach(btn => {
     btn.onclick = async () => {
       try {
@@ -126,7 +157,7 @@ function openModal({poster, title, meta, genres, overview}) {
   els.mPoster.src = poster;
   els.mTitle.textContent = title;
   els.mMeta.textContent = meta;
-  els.mGenres.innerHTML = genres.map(g => `<span class="px-2 py-0.5 rounded-full text-xs bg-slate-800">${g}</span>`).join('');
+  els.mGenres.innerHTML = genres.map(g => `<span class="px-2 py-0.5 rounded-full text-xs bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">${g}</span>`).join('');
   els.mOverview.textContent = overview || 'Sin descripción disponible.';
   els.modal.showModal();
 }
