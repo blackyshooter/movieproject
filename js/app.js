@@ -13,11 +13,11 @@ const els = {
   mOverview: document.getElementById('mOverview'),
 };
 
-// 🔑 Pega tu API key aquí
-const TMDB_KEY = '20600cdcada2dc0d20425d2fc04c9e8b';
+// 🔑 Coloca tu API key aquí
+const TMDB_KEY = 'TU_API_KEY';
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/';
-const POSTER = (path, size='w342') => path ? `${IMG}${size}${path}` : './assets/placeholder.svg';
+const POSTER = (path, size='w342') => path ? `${IMG}${size}${path}` : null;
 
 let lastQuery = '';
 let currentPage = 1;
@@ -25,25 +25,35 @@ let totalPages = 1;
 
 function setState(msg){ els.state.innerHTML = msg; }
 function clearGrid(){ els.grid.innerHTML = ''; }
+
 function skeletonCards(qty = 8){
   const card = `
-  <div class="animate-pulse">
-    <div class="aspect-[2/3] w-full rounded-lg bg-slate-800"></div>
+  <div class="animate-pulse transition">
+    <div class="aspect-[2/3] w-full rounded-xl bg-slate-800"></div>
     <div class="mt-2 h-4 w-3/4 rounded bg-slate-800"></div>
     <div class="mt-1 h-3 w-1/2 rounded bg-slate-800"></div>
   </div>`;
   els.grid.insertAdjacentHTML('beforeend', Array.from({length: qty}).map(() => card).join(''));
 }
 
+// 🧩 Template visual mejorado
 function cardTemplate({ id, title, year, poster, rating }) {
   return `
-  <button data-id="${id}" class="group text-left focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded">
-    <div class="aspect-[2/3] w-full overflow-hidden rounded-lg ring-1 ring-white/10 bg-slate-900">
+  <button data-id="${id}"
+    class="group relative text-left focus:outline-none focus:ring-2 focus:ring-emerald-400 rounded-xl overflow-hidden transition">
+    <div class="aspect-[2/3] w-full overflow-hidden rounded-xl ring-1 ring-white/10 bg-slate-900 group-hover:ring-emerald-400/50 shadow-md">
       <img src="${poster}" alt="Póster de ${title}"
-        class="h-full w-full object-cover group-hover:scale-[1.02] transition">
+        class="h-full w-full object-cover group-hover:scale-[1.06] transition-transform duration-300 ease-out opacity-0"
+        onload="this.classList.remove('opacity-0')">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition"></div>
+      <div class="absolute bottom-2 left-2 right-2 text-xs opacity-0 group-hover:opacity-100 transition">
+        <div class="flex items-center justify-between">
+          <span class="bg-black/40 px-2 py-0.5 rounded text-amber-300">⭐ ${rating ?? '—'}</span>
+          <span class="bg-black/40 px-2 py-0.5 rounded text-slate-200">${year ?? '—'}</span>
+        </div>
+      </div>
     </div>
-    <h3 class="mt-2 text-sm font-medium line-clamp-2">${title}</h3>
-    <p class="text-xs text-slate-400">${year ?? '—'} · ⭐ ${rating ?? '—'}</p>
+    <h3 class="mt-2 text-sm font-medium line-clamp-2 h-9 leading-tight">${title}</h3>
   </button>`;
 }
 
@@ -59,12 +69,21 @@ async function searchMovies(query, page=1) {
 }
 
 async function getMovie(id) {
-  // Con append_to_response traemos géneros y más data en una
   return fetchJSON(`/movie/${id}`, { append_to_response: 'release_dates,credits' });
 }
 
 function renderResults(list, append=false) {
-  const items = list.map(m => {
+  // 🔍 Filtramos solo los que tienen imagen válida
+  const filtered = list.filter(m => m.poster_path);
+
+  if (!filtered.length) {
+    if (!append) clearGrid();
+    setState('No hay películas con imagen disponible para mostrar.');
+    els.loadMore.classList.add('hidden');
+    return;
+  }
+
+  const items = filtered.map(m => {
     const title = m.title || m.name || 'Sin título';
     const year = m.release_date ? m.release_date.slice(0,4) : null;
     const poster = POSTER(m.poster_path);
@@ -120,7 +139,6 @@ els.modal.addEventListener('click', (e) => {
   }
 });
 
-// Buscar
 els.form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const q = els.input.value.trim();
@@ -145,8 +163,8 @@ els.form.addEventListener('submit', async (e) => {
       return;
     }
 
-    setState(`Mostrando ${Math.min(data.results.length, 20)} de ~${data.total_results} resultados.`);
     renderResults(data.results);
+    setState(`Mostrando ${Math.min(data.results.length, 20)} de ~${data.total_results} resultados.`);
     els.loadMore.classList.toggle('hidden', currentPage >= totalPages);
   } catch (err) {
     console.error(err);
@@ -156,7 +174,6 @@ els.form.addEventListener('submit', async (e) => {
   }
 });
 
-// Paginación
 els.loadMore.addEventListener('click', async () => {
   if (currentPage >= totalPages) return;
   els.loadMore.disabled = true;
