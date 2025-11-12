@@ -13,8 +13,8 @@ const els = {
   mOverview: document.getElementById('mOverview'),
 };
 
-// 🔑 Coloca tu API key aquí
-const TMDB_KEY = 'TU_API_KEY';
+
+const TMDB_KEY = '20600cdcada2dc0d20425d2fc04c9e8b';
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/';
 const POSTER = (path, size='w342') => path ? `${IMG}${size}${path}` : null;
